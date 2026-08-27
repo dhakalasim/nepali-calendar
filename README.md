@@ -1,8 +1,8 @@
 # Nepali Calendar
 
 A Bikram Sambat (BS) + Gregorian (AD) calendar where you add important dates and
-get **email reminders** before they arrive. Nepali festivals and public holidays
-come pre-loaded.
+get **email or text reminders** before they arrive. Nepali festivals and public
+holidays come pre-loaded.
 
 - **Backend** – Python / FastAPI, SQLAlchemy, APScheduler
 - **Database** – PostgreSQL
@@ -79,26 +79,42 @@ The Vite dev server proxies `/api` to `http://localhost:8000`.
 
 ---
 
-## Enabling email reminders
+## Reminders (email + text)
 
-Edit `.env` (see `.env.example`). For Gmail, create an
-[App Password](https://myaccount.google.com/apppasswords):
+A background job runs every day at `NOTIFY_HOUR` (Asia/Kathmandu) and sends
+**one digest** of every event that has entered its reminder window
+(`notify_days_before`). Each reminder goes out once — `notification_log`
+prevents duplicates.
+
+### 1. Where reminders go — set in the app
+
+Click the **⚙️ gear** in the header:
+
+- **Email reminders** — enter one or more addresses
+- **Text (SMS) reminders** — enter one or more phone numbers (`+9779800000000`)
+- **Send test email / Send test text** buttons deliver a message immediately
+
+These are stored in the database (`app_settings`), so no restart is needed.
+
+### 2. How they're delivered — set in `.env`
+
+| Channel | Env vars | If unset |
+| ------- | -------- | -------- |
+| Email   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | digest is **printed to the backend console** |
+| SMS     | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | text is **printed to the backend console** |
+
+Gmail example (create an [App Password](https://myaccount.google.com/apppasswords)):
 
 ```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=you@gmail.com
-SMTP_PASSWORD=your-app-password
-NOTIFY_TO=you@gmail.com
-NOTIFY_HOUR=7
+SMTP_PASSWORD=your-16-char-app-password
 ```
 
-Restart the backend. A background job runs every day at `NOTIFY_HOUR`
-(Asia/Kathmandu) and emails **one digest** listing every event that has entered
-its reminder window (`notify_days_before`). Each reminder is sent once —
-`notification_log` prevents duplicates.
+Restart the backend after editing `.env`.
 
-Trigger it by hand any time:
+### Trigger a run by hand
 
 ```bash
 curl -X POST http://localhost:8200/api/notifications/run
@@ -147,7 +163,10 @@ the app.
 | PUT    | `/api/events/{id}`                  | Update                              |
 | DELETE | `/api/events/{id}`                  | Delete                             |
 | GET    | `/api/events/upcoming?days=`        | Upcoming occurrences (expanded)     |
-| GET    | `/api/notifications/status`         | SMTP / scheduler state              |
+| GET    | `/api/notifications/status`         | Channel config + scheduler state    |
+| GET    | `/api/notifications/settings`       | Recipient emails / phones, toggles  |
+| PUT    | `/api/notifications/settings`       | Update recipients / toggles         |
+| POST   | `/api/notifications/test`           | Send a test now (`{"channels":[…]}`) |
 | GET    | `/api/notifications/preview`        | What the next run would send        |
 | POST   | `/api/notifications/run`            | Send the digest now                 |
 | GET    | `/api/notifications/log`            | Sent-reminder history               |
@@ -162,7 +181,8 @@ Full interactive docs at `/docs`.
 cd backend && pytest
 ```
 
-Covers BS↔AD conversion round-trips, month lengths, and recurrence expansion.
+Covers BS↔AD conversion round-trips, month lengths, recurrence expansion, and
+notification settings / multi-channel delivery.
 
 ---
 
@@ -174,14 +194,14 @@ backend/
     main.py            FastAPI app + lifespan (scheduler)
     config.py          env-driven settings
     database.py        engine / session / init_db
-    models.py          Event, NotificationLog
+    models.py          Event, NotificationLog, AppSettings
     schemas.py         Pydantic models
     nepali_date.py     BS <-> AD helpers
     recurrence.py      expand events into occurrences
     crud.py            event DB operations
     seed.py            load data/holidays.json
     routers/           calendar, dates, events, notifications
-    notifications/     email, templates, service, scheduler
+    notifications/     email, sms, templates, service, scheduler, settings_store
   data/holidays.json
   tests/
 frontend/
@@ -189,6 +209,7 @@ frontend/
     App.jsx
     api.js
     constants.js
-    components/        Header, CalendarGrid, DayCell, Sidebar, EventModal
+    components/        Header, CalendarGrid, DayCell, Sidebar,
+                       EventModal, SettingsModal
 docker-compose.yml
 ```

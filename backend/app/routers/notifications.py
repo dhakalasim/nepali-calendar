@@ -1,10 +1,10 @@
-"""Endpoints to inspect and trigger reminders."""
+"""Endpoints to inspect, configure, and trigger reminders."""
 
 from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -12,21 +12,77 @@ from ..config import get_settings
 from ..database import get_db
 from ..models import NotificationLog
 from ..notifications.scheduler import scheduler_running
-from ..notifications.service import preview_reminders, run_reminders
+from ..notifications.service import preview_reminders, run_reminders, send_test
+from ..notifications.settings_store import (
+    get_app_settings,
+    get_email_targets,
+    get_sms_targets,
+    normalize_emails,
+    normalize_phones,
+)
+from ..schemas import (
+    NotificationSettingsOut,
+    NotificationSettingsUpdate,
+    TestNotificationRequest,
+)
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 
 @router.get("/status")
-def status() -> dict:
-    settings = get_settings()
+def status(db: Session = Depends(get_db)) -> dict:
+    s = get_settings()
+    app = get_app_settings(db)
+    email_targets = get_email_targets(db)
+    sms_targets = get_sms_targets(db)
     return {
-        "email_enabled": settings.email_enabled,
-        "recipients": settings.notify_recipients,
-        "notify_hour": settings.notify_hour,
         "scheduler_running": scheduler_running(),
-        "smtp_host": settings.smtp_host or None,
+        "notify_hour": s.notify_hour,
+        "email": {
+            "provider_configured": s.smtp_configured,
+            "enabled": app.email_enabled,
+            "recipients": email_targets,
+            "active": bool(app.email_enabled and email_targets),
+        },
+        "sms": {
+            "provider_configured": s.twilio_configured,
+            "enabled": app.sms_enabled,
+            "recipients": sms_targets,
+            "active": bool(app.sms_enabled and sms_targets),
+        },
     }
+
+
+@router.get("/settings", response_model=NotificationSettingsOut)
+def get_notification_settings(db: Session = Depends(get_db)):
+    return get_app_settings(db)
+
+
+@router.put("/settings", response_model=NotificationSettingsOut)
+def update_notification_settings(
+    payload: NotificationSettingsUpdate, db: Session = Depends(get_db)
+):
+    row = get_app_settings(db)
+    data = payload.model_dump(exclude_unset=True)
+    try:
+        if "notify_emails" in data:
+            row.notify_emails = normalize_emails(data["notify_emails"] or "")
+        if "notify_phones" in data:
+            row.notify_phones = normalize_phones(data["notify_phones"] or "")
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    if "email_enabled" in data:
+        row.email_enabled = bool(data["email_enabled"])
+    if "sms_enabled" in data:
+        row.sms_enabled = bool(data["sms_enabled"])
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+@router.post("/test")
+def test(payload: TestNotificationRequest, db: Session = Depends(get_db)) -> dict:
+    return send_test(db, payload.channels)
 
 
 @router.get("/preview")

@@ -76,3 +76,20 @@ class NotificationLog(Base):
     sent_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class AppSettings(Base):
+    """Single-row (id=1) table holding user-editable notification preferences:
+    where reminders are delivered and which channels are on. Provider
+    credentials (SMTP / Twilio) stay in the environment, not here."""
+
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, default=1)
+    notify_emails: Mapped[str] = mapped_column(Text, default="")  # comma separated
+    notify_phones: Mapped[str] = mapped_column(Text, default="")  # comma separated E.164
+    email_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    sms_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

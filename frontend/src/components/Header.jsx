@@ -22,8 +22,15 @@ export default function Header({
   onToggleLang,
   onAdd,
   onPreviewReminders,
+  onOpenSettings,
   notif,
 }) {
+  const channels = []
+  if (notif?.email?.active) channels.push('email')
+  if (notif?.sms?.active) channels.push('SMS')
+  const reminderTitle = channels.length
+    ? `Reminders on via ${channels.join(' + ')} → preview what would go out`
+    : 'No delivery channel set yet — click the gear to add an email or phone'
   const monthTitle = calendar
     ? lang === 'np'
       ? `${BS_MONTHS_NP[calendar.bs_month - 1]} ${toNepaliDigits(calendar.bs_year)}`
@@ -69,14 +76,18 @@ export default function Header({
         </button>
         <button
           className="btn btn--ghost"
-          onClick={onPreviewReminders}
-          title={
-            notif?.email_enabled
-              ? `Email reminders on → ${notif.recipients.join(', ')}`
-              : 'SMTP not configured — reminders print to the backend console'
-          }
+          onClick={onOpenSettings}
+          title="Notification settings (email / SMS)"
+          aria-label="Notification settings"
         >
-          🔔 Reminders{notif && !notif.email_enabled ? ' (test)' : ''}
+          ⚙️
+        </button>
+        <button
+          className="btn btn--ghost"
+          onClick={onPreviewReminders}
+          title={reminderTitle}
+        >
+          🔔 Reminders{notif && channels.length === 0 ? ' (not set)' : ''}
         </button>
         <button className="btn btn--primary" onClick={onAdd}>
           + Add event

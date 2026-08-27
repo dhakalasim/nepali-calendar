@@ -35,4 +35,12 @@ export const api = {
   notificationStatus: () => request('/notifications/status'),
   previewReminders: () => request('/notifications/preview'),
   runReminders: () => request('/notifications/run', { method: 'POST' }),
+  getNotifSettings: () => request('/notifications/settings'),
+  updateNotifSettings: (body) =>
+    request('/notifications/settings', { method: 'PUT', body: JSON.stringify(body) }),
+  sendTest: (channels) =>
+    request('/notifications/test', {
+      method: 'POST',
+      body: JSON.stringify({ channels: channels ?? null }),
+    }),
 }

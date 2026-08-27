@@ -21,6 +21,19 @@ function adShort(iso) {
   })
 }
 
+function previewTargetLine(preview, notif) {
+  const targets = [
+    ...(preview.email_targets || []),
+    ...(preview.sms_targets || []),
+  ]
+  if (targets.length) return `Would notify ${targets.join(', ')}:`
+  const providersOff =
+    notif && !notif.email?.provider_configured && !notif.sms?.provider_configured
+  return providersOff
+    ? 'No recipient set — this would print to the backend console:'
+    : 'No recipient set yet (open ⚙️ to add one). This would send:'
+}
+
 // Recurring events first, then upcoming one-offs (soonest first),
 // then past one-offs (most recent first).
 function sortForManagement(events, todayIso) {
@@ -57,11 +70,7 @@ export default function Sidebar({
             </p>
           ) : (
             <>
-              <p className="panel__note">
-                {notif?.email_enabled
-                  ? `Would email ${notif.recipients.join(', ')}:`
-                  : 'SMTP off — this would print to the backend console:'}
-              </p>
+              <p className="panel__note">{previewTargetLine(reminderPreview, notif)}</p>
               <ul className="mini-list">
                 {reminderPreview.items.map((it) => (
                   <li key={it.event_id}>

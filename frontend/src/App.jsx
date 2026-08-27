@@ -4,6 +4,7 @@ import Header from './components/Header.jsx'
 import CalendarGrid from './components/CalendarGrid.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import EventModal from './components/EventModal.jsx'
+import SettingsModal from './components/SettingsModal.jsx'
 
 export default function App() {
   const [today, setToday] = useState(null)
@@ -15,6 +16,7 @@ export default function App() {
   const [reminderPreview, setReminderPreview] = useState(null)
   const [lang, setLang] = useState('en')
   const [modal, setModal] = useState(null) // { mode, initial }
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [toast, setToast] = useState(null)
   const [error, setError] = useState(null)
 
@@ -34,6 +36,11 @@ export default function App() {
       .catch((e) => setError(e.message))
     api.notificationStatus().then(setNotif).catch(() => {})
   }, [])
+
+  const refreshNotif = useCallback(
+    () => api.notificationStatus().then(setNotif).catch(() => {}),
+    [],
+  )
 
   const loadCalendar = useCallback(() => {
     if (!view) return
@@ -116,7 +123,7 @@ export default function App() {
           <h2>Can’t reach the API</h2>
           <p>{error}</p>
           <p className="fatal__hint">
-            Is the backend running on <code>:8000</code>?
+            Is the backend running? (default <code>:8200</code> with Docker)
           </p>
         </div>
       )
@@ -133,6 +140,7 @@ export default function App() {
           onToggleLang={() => setLang((l) => (l === 'en' ? 'np' : 'en'))}
           onAdd={() => openCreate(null)}
           onPreviewReminders={previewReminders}
+          onOpenSettings={() => setSettingsOpen(true)}
         />
         <div className="layout">
           <main className="main">
@@ -168,6 +176,14 @@ export default function App() {
           onDelete={deleteEvent}
           onClose={() => setModal(null)}
           onConvert={api.convert}
+        />
+      )}
+      {settingsOpen && (
+        <SettingsModal
+          status={notif}
+          onClose={() => setSettingsOpen(false)}
+          onSaved={refreshNotif}
+          flash={flash}
         />
       )}
       {toast && <div className="toast">{toast}</div>}

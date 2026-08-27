@@ -25,6 +25,22 @@ def _lead_phrase(days: int) -> str:
     return f"in {days} days"
 
 
+def render_sms(items: list[DueItem], on_date: date) -> str:
+    """Short plain-text body for a text message."""
+    if len(items) == 1:
+        item = items[0]
+        bs = nepali_date.ad_to_bs(item.occurrence)
+        return (
+            f"Reminder: {item.event.title} {_lead_phrase(item.days_until)} "
+            f"({nepali_date.bs_label(bs.year, bs.month, bs.day)} BS / "
+            f"{item.occurrence.strftime('%b %d')})."
+        )
+    lines = [f"Nepali Calendar - {len(items)} upcoming:"]
+    for item in items:
+        lines.append(f"- {item.event.title}: {_lead_phrase(item.days_until)}")
+    return "\n".join(lines)
+
+
 def render_digest(items: list[DueItem], on_date: date) -> tuple[str, str, str]:
     settings = get_settings()
     count = len(items)

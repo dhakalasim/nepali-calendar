@@ -78,3 +78,23 @@ class ConvertResult(BaseModel):
     bs_month_name_np: str
     weekday: int
     weekday_name: str
+
+
+class NotificationSettingsOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    notify_emails: str
+    notify_phones: str
+    email_enabled: bool
+    sms_enabled: bool
+
+
+class NotificationSettingsUpdate(BaseModel):
+    notify_emails: Optional[str] = None
+    notify_phones: Optional[str] = None
+    email_enabled: Optional[bool] = None
+    sms_enabled: Optional[bool] = None
+
+
+class TestNotificationRequest(BaseModel):
+    channels: Optional[list[Literal["email", "sms"]]] = None

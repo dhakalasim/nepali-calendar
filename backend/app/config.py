@@ -27,7 +27,12 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = "Nepali Calendar <no-reply@example.com>"
     smtp_starttls: bool = True
-    notify_to: str = ""  # comma separated recipient addresses
+    notify_to: str = ""  # comma separated fallback recipients (UI setting wins)
+
+    # --- SMS / Twilio (leave blank to print texts to stdout) ---
+    twilio_account_sid: str = ""
+    twilio_auth_token: str = ""
+    twilio_from: str = ""  # Twilio number (+1...) or Messaging Service SID (MG...)
 
     # --- Scheduler ---
     notify_hour: int = 7  # hour of day (Asia/Kathmandu) to send the daily digest
@@ -45,8 +50,14 @@ class Settings(BaseSettings):
         return [e.strip() for e in self.notify_to.split(",") if e.strip()]
 
     @property
-    def email_enabled(self) -> bool:
-        return bool(self.smtp_host and self.notify_recipients)
+    def smtp_configured(self) -> bool:
+        return bool(self.smtp_host)
+
+    @property
+    def twilio_configured(self) -> bool:
+        return bool(
+            self.twilio_account_sid and self.twilio_auth_token and self.twilio_from
+        )
 
 
 @lru_cache

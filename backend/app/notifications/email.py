@@ -8,7 +8,12 @@ from email.message import EmailMessage
 from ..config import get_settings
 
 
-def send_email(subject: str, body_text: str, body_html: str | None = None) -> tuple[str, str]:
+def send_email(
+    subject: str,
+    body_text: str,
+    body_html: str | None,
+    recipients: list[str],
+) -> tuple[str, str]:
     """Return (status, detail).
 
     status is one of:
@@ -17,12 +22,11 @@ def send_email(subject: str, body_text: str, body_html: str | None = None) -> tu
       * ``failed`` - SMTP raised; detail carries the error
     """
     settings = get_settings()
-    recipients = settings.notify_recipients
 
-    if not settings.smtp_host or not recipients:
+    if not settings.smtp_configured or not recipients:
         print(
             "\n=== [reminder email - SMTP disabled] ===\n"
-            f"To: {', '.join(recipients) or '(no NOTIFY_TO set)'}\n"
+            f"To: {', '.join(recipients) or '(no recipient set)'}\n"
             f"Subject: {subject}\n\n{body_text}\n"
             "=======================================\n"
         )
