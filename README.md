@@ -102,23 +102,34 @@ Click the **⚙️ gear** in the header:
 
 These are stored in the database (`app_settings`), so no restart is needed.
 
-### 2. How they're delivered — set in `.env`
+### 2. How they're delivered — credentials in `.env`
 
-| Channel | Env vars | If unset |
-| ------- | -------- | -------- |
-| Email   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | digest is **printed to the backend console** |
-| SMS     | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | text is **printed to the backend console** |
+Nothing sends for real until a provider is connected. `cp .env.example .env`,
+fill in **one email** provider and **one SMS** provider, then
+`docker compose restart backend`. Check the ⚙️ dialog — each channel shows
+"connected" or "not connected".
 
-Gmail example (create an [App Password](https://myaccount.google.com/apppasswords)):
+**Email — Gmail** (free): enable 2-Step Verification, create an
+[App Password](https://myaccount.google.com/apppasswords), then in `.env`:
 
 ```env
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=you@gmail.com
+SMTP_FROM=Nepali Calendar <you@gmail.com>
 SMTP_PASSWORD=your-16-char-app-password
 ```
 
-Restart the backend after editing `.env`.
+**SMS — pick one gateway** (`SMS_PROVIDER=auto` uses whichever is filled):
+
+| Provider | `.env` | Notes |
+| -------- | ------ | ----- |
+| [AakashSMS](https://aakashsms.com) | `AAKASH_SMS_TOKEN` | Nepal; simplest signup |
+| [Sparrow SMS](https://sparrowsms.com) | `SPARROW_SMS_TOKEN`, `SPARROW_SMS_FROM` | Nepal; needs an approved sender id |
+| [Twilio](https://twilio.com) | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` | international; enable *Messaging Geographic Permissions → Nepal* |
+
+Numbers are stored as `+977…` and reduced to the local 10-digit form for the
+Nepal gateways automatically.
 
 ### Trigger a run by hand
 

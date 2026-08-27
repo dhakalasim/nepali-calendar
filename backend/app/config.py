@@ -29,7 +29,18 @@ class Settings(BaseSettings):
     smtp_starttls: bool = True
     notify_to: str = ""  # comma separated fallback recipients (UI setting wins)
 
-    # --- SMS / Twilio (leave blank to print texts to stdout) ---
+    # --- SMS (leave every provider blank to print texts to stdout) ---
+    # sms_provider: "auto" picks whichever provider below has credentials.
+    sms_provider: str = "auto"  # auto | console | aakash | sparrow | twilio
+
+    # AakashSMS (aakashsms.com) - Nepal gateway, simplest signup
+    aakash_sms_token: str = ""
+
+    # Sparrow SMS (sparrowsms.com) - Nepal gateway
+    sparrow_sms_token: str = ""
+    sparrow_sms_from: str = ""  # approved sender identity
+
+    # Twilio (twilio.com) - international
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_from: str = ""  # Twilio number (+1...) or Messaging Service SID (MG...)
@@ -51,13 +62,35 @@ class Settings(BaseSettings):
 
     @property
     def smtp_configured(self) -> bool:
-        return bool(self.smtp_host)
+        # host is required; if a username is given a password must be too
+        if not self.smtp_host:
+            return False
+        if self.smtp_user and not self.smtp_password:
+            return False
+        return True
 
     @property
     def twilio_configured(self) -> bool:
         return bool(
             self.twilio_account_sid and self.twilio_auth_token and self.twilio_from
         )
+
+    @property
+    def resolved_sms_provider(self) -> str:
+        """Which SMS backend will actually be used."""
+        if self.sms_provider and self.sms_provider != "auto":
+            return self.sms_provider
+        if self.aakash_sms_token:
+            return "aakash"
+        if self.sparrow_sms_token and self.sparrow_sms_from:
+            return "sparrow"
+        if self.twilio_configured:
+            return "twilio"
+        return "console"
+
+    @property
+    def sms_configured(self) -> bool:
+        return self.resolved_sms_provider != "console"
 
 
 @lru_cache

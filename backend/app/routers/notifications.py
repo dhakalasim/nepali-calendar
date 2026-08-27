@@ -50,7 +50,8 @@ def status(db: Session = Depends(get_db)) -> dict:
             "active": bool(app.email_enabled and email_targets),
         },
         "sms": {
-            "provider_configured": s.twilio_configured,
+            "provider_configured": s.sms_configured,
+            "provider": s.resolved_sms_provider,
             "enabled": app.sms_enabled,
             "recipients": sms_targets,
             "active": bool(app.sms_enabled and sms_targets),

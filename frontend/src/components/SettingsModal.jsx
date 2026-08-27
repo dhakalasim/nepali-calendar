@@ -122,8 +122,8 @@ export default function SettingsModal({ status, onClose, onSaved, flash }) {
                 </label>
                 <ProviderHint
                   ok={email?.provider_configured}
-                  okText="SMTP is configured on the server."
-                  offText="No SMTP on the server — test emails print to the backend console. Add SMTP_* to .env for real delivery."
+                  okText="SMTP is connected — real emails will be sent."
+                  offText="Not connected — emails only print to the backend console. Add SMTP_* to .env (Gmail app password) and restart the backend."
                 />
                 <TestRow
                   label="Send test email"
@@ -154,8 +154,8 @@ export default function SettingsModal({ status, onClose, onSaved, flash }) {
                 </label>
                 <ProviderHint
                   ok={sms?.provider_configured}
-                  okText="Twilio is configured on the server."
-                  offText="No Twilio on the server — test texts print to the backend console. Add TWILIO_* to .env for real delivery."
+                  okText={`SMS gateway connected (${sms?.provider}) — real texts will be sent.`}
+                  offText="Not connected — texts only print to the backend console. Add a Nepal SMS gateway token (AakashSMS or Sparrow) to .env and restart the backend."
                 />
                 <TestRow
                   label="Send test text"
