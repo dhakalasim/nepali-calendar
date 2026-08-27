@@ -105,9 +105,10 @@ These are stored in the database (`app_settings`), so no restart is needed.
 ### 2. How they're delivered — credentials in `.env`
 
 Nothing sends for real until a provider is connected. `cp .env.example .env`,
-fill in **one email** provider and **one SMS** provider, then
-`docker compose restart backend`. Check the ⚙️ dialog — each channel shows
-"connected" or "not connected".
+fill in **one email** provider and **one SMS** provider, then reload the
+backend with `docker compose up -d backend` (plain `restart` does *not*
+re-read `.env`). Check the ⚙️ dialog — each channel shows "connected" or
+"not connected".
 
 **Email — Gmail** (free): enable 2-Step Verification, create an
 [App Password](https://myaccount.google.com/apppasswords), then in `.env`:
