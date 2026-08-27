@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import nepali_date
-from ..models import Event, NotificationLog
+from ..models import Event, EventReminder, NotificationLog
 from ..recurrence import next_occurrence
 from .email import send_email
 from .settings_store import get_app_settings, get_email_targets, get_sms_targets
@@ -134,6 +134,69 @@ def run_reminders(db: Session, on_date: date | None = None) -> dict:
         "channels": channels,
         "items": _due_items_json(due),
     }
+
+
+def _channels_for(choice: str) -> set[str]:
+    return {"email", "sms"} if choice == "all" else {choice}
+
+
+def _deliver_now(db: Session, due: list[DueItem], on_date: date, want: set[str]) -> dict:
+    """Send `due` right now over the requested channels that have a recipient.
+    Ignores the per-channel enable toggles - this is an explicit action."""
+    results: dict[str, tuple[str, str]] = {}
+    if "email" in want:
+        targets = get_email_targets(db)
+        if targets:
+            subject, text, html = render_digest(due, on_date)
+            results["email"] = send_email(subject, text, html, targets)
+    if "sms" in want:
+        targets = get_sms_targets(db)
+        if targets:
+            results["sms"] = send_sms(render_sms(due, on_date), targets)
+    return results
+
+
+def send_event_reminder(db: Session, event: Event, channels: str = "all") -> dict:
+    """Deliver a reminder for a single event immediately (email and/or text)."""
+    on_date = nepali_date.today_npt()
+    occ = next_occurrence(event, on_date) or event.ad_date
+    due = [DueItem(event=event, occurrence=occ, days_until=(occ - on_date).days)]
+    results = _deliver_now(db, due, on_date, _channels_for(channels))
+    return {
+        "event_id": event.id,
+        "sent": any(s in _OK for s, _ in results.values()),
+        "channels": {c: {"status": s, "detail": d} for c, (s, d) in results.items()},
+        "note": None if results else "No recipient set for the requested channel(s)",
+    }
+
+
+def run_scheduled_reminders(db: Session, now: datetime | None = None) -> dict:
+    """Fire every one-off EventReminder whose time has arrived."""
+    now = now or nepali_date.now_utc_naive()
+    rows = (
+        db.scalars(
+            select(EventReminder)
+            .where(EventReminder.sent_at.is_(None), EventReminder.remind_at <= now)
+            .order_by(EventReminder.remind_at)
+        )
+        .all()
+    )
+    processed = []
+    for row in rows:
+        result = send_event_reminder(db, row.event, row.channels)
+        row.sent_at = now
+        row.status = "sent" if result["sent"] else "failed"
+        row.detail = (
+            "; ".join(f"{c}:{v['status']}" for c, v in result["channels"].items())
+            or result.get("note")
+            or "no channel"
+        )
+        processed.append(
+            {"reminder_id": row.id, "event": row.event.title, "status": row.status}
+        )
+    if processed:
+        db.commit()
+    return {"processed": len(processed), "items": processed}
 
 
 def send_test(db: Session, channels: list[str] | None = None) -> dict:

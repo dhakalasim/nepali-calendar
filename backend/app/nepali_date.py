@@ -43,6 +43,19 @@ def today_npt() -> date:
     return datetime.now(NPT).date()
 
 
+def now_utc_naive() -> datetime:
+    """Current instant as a naive UTC datetime (how reminders are stored)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def npt_wallclock_to_utc_naive(dt: datetime) -> datetime:
+    """Take a datetime the user picked (Nepal wall-clock, usually naive) and
+    return the matching naive-UTC value for storage/comparison."""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=NPT)
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+
 def ad_to_bs(d: date) -> nepali_datetime.date:
     try:
         return nepali_datetime.date.from_datetime_date(d)

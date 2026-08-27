@@ -32,6 +32,11 @@ export const api = {
   updateEvent: (id, body) =>
     request(`/events/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   deleteEvent: (id) => request(`/events/${id}`, { method: 'DELETE' }),
+  sendEventReminderNow: (id, channels = 'all') =>
+    request(`/events/${id}/send-reminder`, {
+      method: 'POST',
+      body: JSON.stringify({ channels }),
+    }),
   notificationStatus: () => request('/notifications/status'),
   previewReminders: () => request('/notifications/preview'),
   runReminders: () => request('/notifications/run', { method: 'POST' }),

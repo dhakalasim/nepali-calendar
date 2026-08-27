@@ -81,10 +81,16 @@ The Vite dev server proxies `/api` to `http://localhost:8000`.
 
 ## Reminders (email + text)
 
-A background job runs every day at `NOTIFY_HOUR` (Asia/Kathmandu) and sends
-**one digest** of every event that has entered its reminder window
-(`notify_days_before`). Each reminder goes out once — `notification_log`
-prevents duplicates.
+Three ways a reminder goes out, all to the same email(s) / phone(s):
+
+| Kind | When it fires | Set on |
+| ---- | ------------- | ------ |
+| **Auto digest** | daily at `NOTIFY_HOUR` (Asia/Kathmandu), once an event is within `notify_days_before` | the event ("Auto reminder" + days before) |
+| **Specific time** | an exact date + hour + minute you pick (Nepal time); checked every 60 s | the event ("At a specific time" — add as many as you like, each to Email / Text / both) |
+| **Send now** | immediately | "Send reminder now" button when editing an event |
+
+Auto-digest reminders are deduped via `notification_log`; specific-time
+reminders each fire once (`event_reminders.sent_at`).
 
 ### 1. Where reminders go — set in the app
 
@@ -117,9 +123,9 @@ Restart the backend after editing `.env`.
 ### Trigger a run by hand
 
 ```bash
-curl -X POST http://localhost:8200/api/notifications/run
-# pretend it is a different day:
-curl -X POST "http://localhost:8200/api/notifications/run?as_of=2025-09-30"
+curl -X POST http://localhost:8200/api/notifications/run            # auto digest
+curl -X POST http://localhost:8200/api/notifications/run-scheduled  # due specific-time reminders
+curl -X POST http://localhost:8200/api/events/1/send-reminder -d '{"channels":"all"}'
 ```
 
 Or click **🔔 Reminders** in the UI for a dry-run preview.
@@ -163,12 +169,14 @@ the app.
 | PUT    | `/api/events/{id}`                  | Update                              |
 | DELETE | `/api/events/{id}`                  | Delete                             |
 | GET    | `/api/events/upcoming?days=`        | Upcoming occurrences (expanded)     |
+| POST   | `/api/events/{id}/send-reminder`    | Send a reminder for one event now   |
 | GET    | `/api/notifications/status`         | Channel config + scheduler state    |
 | GET    | `/api/notifications/settings`       | Recipient emails / phones, toggles  |
 | PUT    | `/api/notifications/settings`       | Update recipients / toggles         |
 | POST   | `/api/notifications/test`           | Send a test now (`{"channels":[…]}`) |
-| GET    | `/api/notifications/preview`        | What the next run would send        |
+| GET    | `/api/notifications/preview`        | What the next digest would send     |
 | POST   | `/api/notifications/run`            | Send the digest now                 |
+| POST   | `/api/notifications/run-scheduled`  | Fire due specific-time reminders    |
 | GET    | `/api/notifications/log`            | Sent-reminder history               |
 
 Full interactive docs at `/docs`.
@@ -194,7 +202,7 @@ backend/
     main.py            FastAPI app + lifespan (scheduler)
     config.py          env-driven settings
     database.py        engine / session / init_db
-    models.py          Event, NotificationLog, AppSettings
+    models.py          Event, EventReminder, NotificationLog, AppSettings
     schemas.py         Pydantic models
     nepali_date.py     BS <-> AD helpers
     recurrence.py      expand events into occurrences

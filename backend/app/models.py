@@ -15,7 +15,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
 
@@ -53,6 +53,34 @@ class Event(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    reminders: Mapped[list["EventReminder"]] = relationship(
+        back_populates="event",
+        cascade="all, delete-orphan",
+        order_by="EventReminder.remind_at",
+    )
+
+
+class EventReminder(Base):
+    """A one-off reminder for an event at an exact moment (stored as naive UTC).
+    Fired by the every-minute scheduler; ``channels`` is 'all' | 'email' | 'sms'."""
+
+    __tablename__ = "event_reminders"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(
+        ForeignKey("events.id", ondelete="CASCADE"), index=True
+    )
+    remind_at: Mapped[datetime] = mapped_column(DateTime, index=True)  # naive UTC
+    channels: Mapped[str] = mapped_column(String(20), default="all")
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending|sent|failed
+    detail: Mapped[str] = mapped_column(Text, default="")
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)  # naive UTC
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    event: Mapped[Event] = relationship(back_populates="reminders")
 
 
 class NotificationLog(Base):

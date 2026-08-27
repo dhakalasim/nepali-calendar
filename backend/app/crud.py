@@ -5,11 +5,11 @@ from __future__ import annotations
 from datetime import date
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from . import nepali_date
-from .models import Event
-from .schemas import BsDate, EventCreate, EventUpdate
+from .models import Event, EventReminder
+from .schemas import BsDate, EventCreate, EventUpdate, ReminderIn
 
 
 def _resolve_dates(
@@ -25,8 +25,31 @@ def _resolve_dates(
     raise ValueError("Either ad_date or bs must be provided")
 
 
+def _sync_reminders(event: Event, reminders: list[ReminderIn] | None) -> None:
+    """Replace the event's *pending* reminders with the supplied list.
+    Already-sent reminders are left untouched."""
+    if reminders is None:
+        return
+    for existing in [r for r in event.reminders if r.sent_at is None]:
+        event.reminders.remove(existing)  # delete-orphan cascade removes the row
+    for item in reminders:
+        event.reminders.append(
+            EventReminder(
+                remind_at=nepali_date.npt_wallclock_to_utc_naive(item.remind_at),
+                channels=item.channels,
+                status="pending",
+            )
+        )
+
+
 def list_events(db: Session) -> list[Event]:
-    return list(db.scalars(select(Event).order_by(Event.ad_date, Event.id)))
+    return list(
+        db.scalars(
+            select(Event)
+            .options(selectinload(Event.reminders))
+            .order_by(Event.ad_date, Event.id)
+        )
+    )
 
 
 def get_event(db: Session, event_id: int) -> Event | None:
@@ -49,6 +72,7 @@ def create_event(db: Session, payload: EventCreate) -> Event:
         is_holiday=payload.category in ("holiday", "festival"),
         source="user",
     )
+    _sync_reminders(event, payload.reminders)
     db.add(event)
     db.commit()
     db.refresh(event)
@@ -72,6 +96,9 @@ def update_event(db: Session, event: Event, payload: EventUpdate) -> Event:
     ):
         if field in data and data[field] is not None:
             setattr(event, field, data[field].strip() if field == "title" else data[field])
+
+    if "reminders" in data:
+        _sync_reminders(event, payload.reminders)
 
     db.commit()
     db.refresh(event)

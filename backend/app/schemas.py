@@ -2,15 +2,39 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 Category = Literal[
     "personal", "holiday", "festival", "birthday", "anniversary", "meeting", "other"
 ]
 Recurrence = Literal["none", "yearly_ad", "yearly_bs"]
+ReminderChannel = Literal["all", "email", "sms"]
+
+
+class ReminderIn(BaseModel):
+    # A moment in Nepal wall-clock time, e.g. "2026-09-01T14:30".
+    remind_at: datetime
+    channels: ReminderChannel = "all"
+
+
+class ReminderOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    remind_at: datetime
+    sent_at: Optional[datetime] = None
+    status: str
+    channels: str
+
+    @field_serializer("remind_at", "sent_at", when_used="json")
+    def _as_utc(self, value: Optional[datetime]) -> Optional[str]:
+        if value is None:
+            return None
+        # stored naive UTC -> emit an explicit-offset ISO string
+        return value.replace(tzinfo=timezone.utc).isoformat()
 
 
 class BsDate(BaseModel):
@@ -31,6 +55,7 @@ class EventBase(BaseModel):
 class EventCreate(EventBase):
     ad_date: Optional[date] = None
     bs: Optional[BsDate] = None
+    reminders: Optional[list[ReminderIn]] = None
 
     @model_validator(mode="after")
     def _one_date(self) -> "EventCreate":
@@ -48,6 +73,7 @@ class EventUpdate(BaseModel):
     notify_enabled: Optional[bool] = None
     ad_date: Optional[date] = None
     bs: Optional[BsDate] = None
+    reminders: Optional[list[ReminderIn]] = None
 
 
 class EventOut(EventBase):
@@ -60,6 +86,7 @@ class EventOut(EventBase):
     bs_day: int
     is_holiday: bool
     source: str
+    reminders: list[ReminderOut] = []
     created_at: datetime
     updated_at: datetime
 
@@ -69,6 +96,10 @@ class EventOccurrence(BaseModel):
     occurrence_ad: date
     occurrence_bs: BsDate
     days_until: int
+
+
+class SendReminderRequest(BaseModel):
+    channels: ReminderChannel = "all"
 
 
 class ConvertResult(BaseModel):

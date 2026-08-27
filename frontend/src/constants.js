@@ -36,6 +36,38 @@ export function toNepaliDigits(value) {
   return String(value).replace(/\d/g, (d) => NP_DIGITS[Number(d)])
 }
 
+// Nepal has a fixed +05:45 offset (no DST).
+const NPT_OFFSET_MIN = 5 * 60 + 45
+
+// UTC ISO string -> "YYYY-MM-DDTHH:MM" Nepal wall-clock, for <input type="datetime-local">
+export function isoToNepalInput(iso) {
+  if (!iso) return ''
+  const shifted = new Date(new Date(iso).getTime() + NPT_OFFSET_MIN * 60000)
+  return shifted.toISOString().slice(0, 16)
+}
+
+// UTC ISO string -> friendly Nepal-time label
+export function formatNepalDateTime(iso) {
+  if (!iso) return ''
+  const shifted = new Date(new Date(iso).getTime() + NPT_OFFSET_MIN * 60000)
+  return (
+    shifted.toLocaleString('en-US', {
+      timeZone: 'UTC',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }) + ' NPT'
+  )
+}
+
+export const REMINDER_CHANNELS = [
+  { value: 'all', label: 'Email + Text' },
+  { value: 'email', label: 'Email only' },
+  { value: 'sms', label: 'Text only' },
+]
+
 export function daysUntilLabel(days) {
   if (days <= 0) return 'Today'
   if (days === 1) return 'Tomorrow'

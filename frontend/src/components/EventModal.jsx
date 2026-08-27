@@ -1,5 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
-import { CATEGORIES, RECURRENCE_OPTIONS } from '../constants.js'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  CATEGORIES,
+  RECURRENCE_OPTIONS,
+  REMINDER_CHANNELS,
+  formatNepalDateTime,
+  isoToNepalInput,
+} from '../constants.js'
 
 const EMPTY = {
   title: '',
@@ -10,20 +16,52 @@ const EMPTY = {
   notify_days_before: 1,
 }
 
-export default function EventModal({ mode, initial, onSave, onDelete, onClose, onConvert }) {
+let rowSeq = 0
+const newRow = (patch = {}) => ({
+  key: `r${++rowSeq}`,
+  remind_at: '',
+  channels: 'all',
+  status: 'pending',
+  sent_at: null,
+  iso: null,
+  ...patch,
+})
+
+export default function EventModal({
+  mode,
+  initial,
+  onSave,
+  onDelete,
+  onClose,
+  onConvert,
+  onSendNow,
+}) {
   const [form, setForm] = useState(() => ({
     ...EMPTY,
     ...initial,
     ad_date: initial?.ad_date || new Date().toISOString().slice(0, 10),
   }))
+  const [rows, setRows] = useState(() =>
+    (initial?.reminders || []).map((r) =>
+      newRow({
+        id: r.id,
+        remind_at: isoToNepalInput(r.remind_at),
+        channels: r.channels === 'all' || r.channels === 'email' || r.channels === 'sms' ? r.channels : 'all',
+        status: r.status,
+        sent_at: r.sent_at,
+        iso: r.remind_at,
+      }),
+    ),
+  )
+  const [sendNowChannel, setSendNowChannel] = useState('all')
+  const [sendNowMsg, setSendNowMsg] = useState('')
   const [bsPreview, setBsPreview] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const firstField = useRef(null)
 
   const set = (key) => (e) => {
-    const value =
-      e.target.type === 'checkbox' ? e.target.checked : e.target.value
+    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value
     setForm((f) => ({ ...f, [key]: value }))
   }
 
@@ -45,10 +83,20 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose, o
     }
   }, [form.ad_date, onConvert])
 
+  const pendingRows = useMemo(() => rows.filter((r) => !r.sent_at), [rows])
+  const sentRows = useMemo(() => rows.filter((r) => r.sent_at), [rows])
+
+  const patchRow = (key, patch) =>
+    setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)))
+  const removeRow = (key) => setRows((rs) => rs.filter((r) => r.key !== key))
+  const addRow = () => setRows((rs) => [...rs, newRow()])
+
   const submit = async (e) => {
     e.preventDefault()
     if (!form.title.trim()) return setError('Give the event a title.')
     if (!form.ad_date) return setError('Pick a date.')
+    if (pendingRows.some((r) => !r.remind_at))
+      return setError('Every reminder time needs a date and time (or remove the empty row).')
     setBusy(true)
     setError('')
     try {
@@ -60,10 +108,31 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose, o
         notify_enabled: form.notify_enabled,
         notify_days_before: Number(form.notify_days_before) || 0,
         ad_date: form.ad_date,
+        reminders: pendingRows.map((r) => ({
+          remind_at: r.remind_at,
+          channels: r.channels,
+        })),
       })
     } catch (err) {
       setError(err.message)
       setBusy(false)
+    }
+  }
+
+  const sendNow = async () => {
+    setSendNowMsg('Sending…')
+    try {
+      const res = await onSendNow(initial.id, sendNowChannel)
+      if (!res.sent) {
+        setSendNowMsg(res.note || 'Nothing sent — check recipients in ⚙️ settings.')
+      } else {
+        const parts = Object.entries(res.channels).map(
+          ([c, v]) => `${c}: ${v.status === 'sent' ? 'sent' : v.status}`,
+        )
+        setSendNowMsg(`Sent — ${parts.join(', ')}`)
+      }
+    } catch (err) {
+      setSendNowMsg(err.message)
     }
   }
 
@@ -138,27 +207,92 @@ export default function EventModal({ mode, initial, onSave, onDelete, onClose, o
             </select>
           </label>
 
-          <div className="field-row field-row--notify">
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={form.notify_enabled}
-                onChange={set('notify_enabled')}
-              />
-              <span>Email me a reminder</span>
-            </label>
-            <label className="field field--narrow">
-              <span>Days before</span>
-              <input
-                type="number"
-                min={0}
-                max={365}
-                value={form.notify_days_before}
-                onChange={set('notify_days_before')}
-                disabled={!form.notify_enabled}
-              />
-            </label>
-          </div>
+          <fieldset className="reminders">
+            <legend>Reminders</legend>
+
+            <div className="field-row field-row--notify">
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={form.notify_enabled}
+                  onChange={set('notify_enabled')}
+                />
+                <span>Auto reminder (in the daily digest)</span>
+              </label>
+              <label className="field field--narrow">
+                <span>Days before</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={365}
+                  value={form.notify_days_before}
+                  onChange={set('notify_days_before')}
+                  disabled={!form.notify_enabled}
+                />
+              </label>
+            </div>
+
+            <div className="reminders__exact">
+              <span className="reminders__label">At a specific time (Nepal time)</span>
+
+              {sentRows.map((r) => (
+                <div key={r.key} className="reminder-row reminder-row--sent">
+                  <span>✓ sent · {formatNepalDateTime(r.iso)}</span>
+                </div>
+              ))}
+
+              {pendingRows.map((r) => (
+                <div key={r.key} className="reminder-row">
+                  <input
+                    type="datetime-local"
+                    value={r.remind_at}
+                    onChange={(e) => patchRow(r.key, { remind_at: e.target.value })}
+                  />
+                  <select
+                    value={r.channels}
+                    onChange={(e) => patchRow(r.key, { channels: e.target.value })}
+                  >
+                    {REMINDER_CHANNELS.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="btn btn--icon btn--sm"
+                    onClick={() => removeRow(r.key)}
+                    aria-label="Remove reminder"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+
+              <button type="button" className="btn btn--ghost btn--sm" onClick={addRow}>
+                ＋ Add a time
+              </button>
+            </div>
+
+            {mode === 'edit' && (
+              <div className="send-now">
+                <select
+                  value={sendNowChannel}
+                  onChange={(e) => setSendNowChannel(e.target.value)}
+                >
+                  {REMINDER_CHANNELS.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="btn btn--ghost btn--sm" onClick={sendNow}>
+                  Send reminder now
+                </button>
+                {sendNowMsg && <span className="hint">{sendNowMsg}</span>}
+              </div>
+            )}
+          </fieldset>
 
           {error && <div className="modal__error">{error}</div>}
 

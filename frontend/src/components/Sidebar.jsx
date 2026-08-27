@@ -136,6 +136,9 @@ export default function Sidebar({
                   {ev.recurrence !== 'none' && (
                     <> · ↻ {RECUR_LABEL[ev.recurrence]}</>
                   )}
+                  {ev.reminders?.some((r) => r.status === 'pending') && (
+                    <> · ⏰ {ev.reminders.filter((r) => r.status === 'pending').length}</>
+                  )}
                   {!ev.notify_enabled && <> · muted</>}
                 </div>
               </div>

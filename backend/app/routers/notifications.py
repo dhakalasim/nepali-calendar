@@ -12,7 +12,12 @@ from ..config import get_settings
 from ..database import get_db
 from ..models import NotificationLog
 from ..notifications.scheduler import scheduler_running
-from ..notifications.service import preview_reminders, run_reminders, send_test
+from ..notifications.service import (
+    preview_reminders,
+    run_reminders,
+    run_scheduled_reminders,
+    send_test,
+)
 from ..notifications.settings_store import (
     get_app_settings,
     get_email_targets,
@@ -99,6 +104,12 @@ def run(
     db: Session = Depends(get_db),
 ) -> dict:
     return run_reminders(db, as_of)
+
+
+@router.post("/run-scheduled")
+def run_scheduled(db: Session = Depends(get_db)) -> dict:
+    """Process any one-off reminders that are due now (also runs every 60s)."""
+    return run_scheduled_reminders(db)
 
 
 @router.get("/log")

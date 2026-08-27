@@ -102,6 +102,17 @@ export default function App() {
     refresh()
   }
 
+  const sendReminderNow = async (id, channels) => {
+    const res = await api.sendEventReminderNow(id, channels)
+    if (res.sent) {
+      const parts = Object.entries(res.channels).map(([c, v]) => `${c}: ${v.status}`)
+      flash(`Reminder sent — ${parts.join(', ')}`)
+    } else {
+      flash(res.note || 'Nothing sent — set a recipient in ⚙️ settings')
+    }
+    return res
+  }
+
   const previewReminders = async () => {
     try {
       const p = await api.previewReminders()
@@ -176,6 +187,7 @@ export default function App() {
           onDelete={deleteEvent}
           onClose={() => setModal(null)}
           onConvert={api.convert}
+          onSendNow={sendReminderNow}
         />
       )}
       {settingsOpen && (

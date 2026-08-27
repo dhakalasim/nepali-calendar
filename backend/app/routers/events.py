@@ -10,8 +10,16 @@ from sqlalchemy.orm import Session
 from .. import crud, nepali_date
 from ..database import get_db
 from ..models import Event
+from ..notifications.service import send_event_reminder
 from ..recurrence import occurrences_in_range
-from ..schemas import BsDate, EventCreate, EventOccurrence, EventOut, EventUpdate
+from ..schemas import (
+    BsDate,
+    EventCreate,
+    EventOccurrence,
+    EventOut,
+    EventUpdate,
+    SendReminderRequest,
+)
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -82,3 +90,16 @@ def delete_event(event_id: int, db: Session = Depends(get_db)) -> Response:
         raise HTTPException(status_code=404, detail="Event not found")
     crud.delete_event(db, event)
     return Response(status_code=204)
+
+
+@router.post("/{event_id}/send-reminder")
+def send_reminder_now(
+    event_id: int,
+    payload: SendReminderRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Email and/or text a reminder for this event right now."""
+    event = crud.get_event(db, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return send_event_reminder(db, event, payload.channels)
