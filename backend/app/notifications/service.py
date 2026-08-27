@@ -11,11 +11,18 @@ from .. import nepali_date
 from ..models import Event, EventReminder, NotificationLog
 from ..recurrence import next_occurrence
 from .email import send_email
-from .settings_store import get_app_settings, get_email_targets, get_sms_targets
+from .settings_store import (
+    get_app_settings,
+    get_email_targets,
+    get_sms_targets,
+    get_telegram_targets,
+)
 from .sms import send_sms
+from .telegram import send_telegram
 from .templates import DueItem, render_digest, render_sms
 
 _OK = ("sent", "logged")
+_ALL_CHANNELS = ("email", "sms", "telegram")
 
 
 def _collect_due(db: Session, on_date: date, *, ignore_log: bool) -> list[DueItem]:
@@ -70,6 +77,7 @@ def preview_reminders(db: Session, on_date: date | None = None) -> dict:
         "html": html,
         "email_targets": get_email_targets(db) if app.email_enabled else [],
         "sms_targets": get_sms_targets(db) if app.sms_enabled else [],
+        "telegram_targets": get_telegram_targets(db) if app.telegram_enabled else [],
         "items": _due_items_json(due),
     }
 
@@ -87,6 +95,10 @@ def _deliver(db: Session, due: list[DueItem], on_date: date) -> dict[str, tuple[
     sms_targets = get_sms_targets(db)
     if app.sms_enabled and sms_targets:
         results["sms"] = send_sms(render_sms(due, on_date), sms_targets)
+
+    tg_targets = get_telegram_targets(db)
+    if app.telegram_enabled and tg_targets:
+        results["telegram"] = send_telegram(render_sms(due, on_date), tg_targets)
 
     return results
 
@@ -137,7 +149,7 @@ def run_reminders(db: Session, on_date: date | None = None) -> dict:
 
 
 def _channels_for(choice: str) -> set[str]:
-    return {"email", "sms"} if choice == "all" else {choice}
+    return set(_ALL_CHANNELS) if choice == "all" else {choice}
 
 
 def _deliver_now(db: Session, due: list[DueItem], on_date: date, want: set[str]) -> dict:
@@ -153,6 +165,10 @@ def _deliver_now(db: Session, due: list[DueItem], on_date: date, want: set[str])
         targets = get_sms_targets(db)
         if targets:
             results["sms"] = send_sms(render_sms(due, on_date), targets)
+    if "telegram" in want:
+        targets = get_telegram_targets(db)
+        if targets:
+            results["telegram"] = send_telegram(render_sms(due, on_date), targets)
     return results
 
 
@@ -208,7 +224,7 @@ def send_test(db: Session, channels: list[str] | None = None) -> dict:
         f"Test from Nepali Calendar - {nepali_date.bs_label(bs.year, bs.month, bs.day)} "
         f"BS / {on_date.strftime('%A, %b %d, %Y')}. If you got this, reminders work."
     )
-    want = set(channels) if channels else {"email", "sms"}
+    want = set(channels) if channels else set(_ALL_CHANNELS)
     out: dict[str, dict] = {}
 
     if "email" in want:
@@ -228,5 +244,13 @@ def send_test(db: Session, channels: list[str] | None = None) -> dict:
         else:
             status, detail = send_sms(text, targets)
             out["sms"] = {"status": status, "detail": detail}
+
+    if "telegram" in want:
+        targets = get_telegram_targets(db)
+        if not targets:
+            out["telegram"] = {"status": "skipped", "detail": "No Telegram chat linked"}
+        else:
+            status, detail = send_telegram(text, targets)
+            out["telegram"] = {"status": status, "detail": detail}
 
     return {"channels": out}

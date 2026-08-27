@@ -116,8 +116,10 @@ class AppSettings(Base):
     id: Mapped[int] = mapped_column(primary_key=True, default=1)
     notify_emails: Mapped[str] = mapped_column(Text, default="")  # comma separated
     notify_phones: Mapped[str] = mapped_column(Text, default="")  # comma separated E.164
+    notify_telegram: Mapped[str] = mapped_column(Text, default="")  # comma separated chat ids
     email_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     sms_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    telegram_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )

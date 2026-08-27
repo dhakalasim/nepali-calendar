@@ -38,6 +38,8 @@ services:
       TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
       TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
       TWILIO_FROM: ${TWILIO_FROM:-}
+      # Telegram
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       # Scheduler / links
       NOTIFY_HOUR: ${NOTIFY_HOUR:-7}
       APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5273}

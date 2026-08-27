@@ -3,6 +3,7 @@ import {
   CATEGORIES,
   RECURRENCE_OPTIONS,
   REMINDER_CHANNELS,
+  REMINDER_CHANNEL_VALUES,
   formatNepalDateTime,
   isoToNepalInput,
 } from '../constants.js'
@@ -46,7 +47,7 @@ export default function EventModal({
       newRow({
         id: r.id,
         remind_at: isoToNepalInput(r.remind_at),
-        channels: r.channels === 'all' || r.channels === 'email' || r.channels === 'sms' ? r.channels : 'all',
+        channels: REMINDER_CHANNEL_VALUES.includes(r.channels) ? r.channels : 'all',
         status: r.status,
         sent_at: r.sent_at,
         iso: r.remind_at,

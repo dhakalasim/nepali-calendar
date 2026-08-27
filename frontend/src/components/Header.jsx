@@ -27,6 +27,7 @@ export default function Header({
 }) {
   const channels = []
   if (notif?.email?.active) channels.push('email')
+  if (notif?.telegram?.active) channels.push('Telegram')
   if (notif?.sms?.active) channels.push('SMS')
   const reminderTitle = channels.length
     ? `Reminders on via ${channels.join(' + ')} → preview what would go out`

@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     twilio_auth_token: str = ""
     twilio_from: str = ""  # Twilio number (+1...) or Messaging Service SID (MG...)
 
+    # --- Telegram (free; get a bot token from @BotFather) ---
+    telegram_bot_token: str = ""
+
     # --- Scheduler ---
     notify_hour: int = 7  # hour of day (Asia/Kathmandu) to send the daily digest
     scheduler_enabled: bool = True
@@ -91,6 +94,10 @@ class Settings(BaseSettings):
     @property
     def sms_configured(self) -> bool:
         return self.resolved_sms_provider != "console"
+
+    @property
+    def telegram_configured(self) -> bool:
+        return bool(self.telegram_bot_token)
 
 
 @lru_cache

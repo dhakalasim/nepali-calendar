@@ -48,4 +48,5 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ channels: channels ?? null }),
     }),
+  telegramChats: () => request('/notifications/telegram/chats'),
 }

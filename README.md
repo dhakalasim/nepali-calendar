@@ -132,6 +132,13 @@ SMTP_PASSWORD=your-16-char-app-password
 Numbers are stored as `+977…` and reduced to the local 10-digit form for the
 Nepal gateways automatically.
 
+**Telegram — free, no signup** (delivers to the Telegram app, not as SMS):
+
+1. Message [@BotFather](https://t.me/BotFather) → `/newbot` → copy the token
+2. `.env`: `TELEGRAM_BOT_TOKEN=…`, then `docker compose up -d backend`
+3. Open your new bot, send it any message
+4. ⚙️ → Telegram → **Find my chat** fills in the chat id → Save
+
 ### Trigger a run by hand
 
 ```bash
@@ -186,6 +193,7 @@ the app.
 | GET    | `/api/notifications/settings`       | Recipient emails / phones, toggles  |
 | PUT    | `/api/notifications/settings`       | Update recipients / toggles         |
 | POST   | `/api/notifications/test`           | Send a test now (`{"channels":[…]}`) |
+| GET    | `/api/notifications/telegram/chats` | Chats that messaged the bot (chat id lookup) |
 | GET    | `/api/notifications/preview`        | What the next digest would send     |
 | POST   | `/api/notifications/run`            | Send the digest now                 |
 | POST   | `/api/notifications/run-scheduled`  | Fire due specific-time reminders    |
@@ -221,7 +229,7 @@ backend/
     crud.py            event DB operations
     seed.py            load data/holidays.json
     routers/           calendar, dates, events, notifications
-    notifications/     email, sms, templates, service, scheduler, settings_store
+    notifications/     email, sms, telegram, templates, service, scheduler, settings_store
   data/holidays.json
   tests/
 frontend/

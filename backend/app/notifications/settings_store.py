@@ -11,6 +11,7 @@ from ..config import get_settings
 from ..models import AppSettings
 
 _PHONE_RE = re.compile(r"^\+?[0-9]{7,15}$")
+_CHAT_ID_RE = re.compile(r"^-?[0-9]{1,20}$")
 
 
 def _split(raw: str) -> list[str]:
@@ -37,6 +38,10 @@ def get_sms_targets(db: Session) -> list[str]:
     return _split(get_app_settings(db).notify_phones)
 
 
+def get_telegram_targets(db: Session) -> list[str]:
+    return _split(get_app_settings(db).notify_telegram)
+
+
 def normalize_emails(raw: str) -> str:
     out: list[str] = []
     for addr in _split(raw):
@@ -54,6 +59,18 @@ def normalize_phones(raw: str) -> str:
         if not _PHONE_RE.match(cleaned):
             raise ValueError(
                 f"Invalid phone '{phone}' - use international format, e.g. +9779800000000"
+            )
+        out.append(cleaned)
+    return ", ".join(out)
+
+
+def normalize_telegram(raw: str) -> str:
+    out: list[str] = []
+    for chat_id in _split(raw):
+        cleaned = chat_id.strip()
+        if not _CHAT_ID_RE.match(cleaned):
+            raise ValueError(
+                f"Invalid Telegram chat id '{chat_id}' - it should be a number"
             )
         out.append(cleaned)
     return ", ".join(out)

@@ -63,10 +63,13 @@ export function formatNepalDateTime(iso) {
 }
 
 export const REMINDER_CHANNELS = [
-  { value: 'all', label: 'Email + Text' },
+  { value: 'all', label: 'All channels' },
   { value: 'email', label: 'Email only' },
-  { value: 'sms', label: 'Text only' },
+  { value: 'sms', label: 'Text (SMS) only' },
+  { value: 'telegram', label: 'Telegram only' },
 ]
+
+export const REMINDER_CHANNEL_VALUES = REMINDER_CHANNELS.map((c) => c.value)
 
 export function daysUntilLabel(days) {
   if (days <= 0) return 'Today'

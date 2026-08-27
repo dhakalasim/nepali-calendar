@@ -18,24 +18,35 @@ def test_settings_default_and_update(client):
     assert client.get("/api/notifications/settings").json() == {
         "notify_emails": "",
         "notify_phones": "",
+        "notify_telegram": "",
         "email_enabled": True,
         "sms_enabled": False,
+        "telegram_enabled": False,
     }
 
     r = client.put(
         "/api/notifications/settings",
-        json={"notify_emails": "A@B.com , c@d.com", "notify_phones": "+977 98-00000000", "sms_enabled": True},
+        json={
+            "notify_emails": "A@B.com , c@d.com",
+            "notify_phones": "+977 98-00000000",
+            "notify_telegram": "123456789",
+            "sms_enabled": True,
+            "telegram_enabled": True,
+        },
     )
     assert r.status_code == 200
     body = r.json()
     assert body["notify_emails"].split("@")[1].startswith("b.com")  # domain lower-cased
     assert body["notify_phones"] == "+9779800000000"
+    assert body["notify_telegram"] == "123456789"
     assert body["sms_enabled"] is True
+    assert body["telegram_enabled"] is True
 
 
 def test_bad_recipients_rejected(client):
     assert client.put("/api/notifications/settings", json={"notify_emails": "nope"}).status_code == 422
     assert client.put("/api/notifications/settings", json={"notify_phones": "12"}).status_code == 422
+    assert client.put("/api/notifications/settings", json={"notify_telegram": "not-a-number"}).status_code == 422
 
 
 def test_status_reflects_targets(client):
@@ -47,10 +58,20 @@ def test_status_reflects_targets(client):
 
 
 def test_test_endpoint_without_providers_logs(client):
-    client.put("/api/notifications/settings", json={"notify_emails": "x@y.com", "notify_phones": "+9779812345678", "sms_enabled": True})
+    client.put(
+        "/api/notifications/settings",
+        json={
+            "notify_emails": "x@y.com",
+            "notify_phones": "+9779812345678",
+            "notify_telegram": "42",
+            "sms_enabled": True,
+            "telegram_enabled": True,
+        },
+    )
     out = client.post("/api/notifications/test", json={}).json()["channels"]
     assert out["email"]["status"] == "logged"
     assert out["sms"]["status"] == "logged"
+    assert out["telegram"]["status"] == "logged"
 
 
 def test_test_endpoint_skips_unset_channel(client):

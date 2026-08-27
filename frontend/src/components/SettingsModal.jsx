@@ -4,8 +4,10 @@ import { api } from '../api.js'
 const BLANK = {
   notify_emails: '',
   notify_phones: '',
+  notify_telegram: '',
   email_enabled: true,
   sms_enabled: false,
+  telegram_enabled: false,
 }
 
 export default function SettingsModal({ status, onClose, onSaved, flash }) {
@@ -14,6 +16,7 @@ export default function SettingsModal({ status, onClose, onSaved, flash }) {
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [testResult, setTestResult] = useState({})
+  const [tgHint, setTgHint] = useState('')
   const firstField = useRef(null)
 
   useEffect(() => {
@@ -37,14 +40,15 @@ export default function SettingsModal({ status, onClose, onSaved, flash }) {
       [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
     }))
 
-  const persist = async () => {
-    return api.updateNotifSettings({
+  const persist = () =>
+    api.updateNotifSettings({
       notify_emails: form.notify_emails,
       notify_phones: form.notify_phones,
+      notify_telegram: form.notify_telegram,
       email_enabled: form.email_enabled,
       sms_enabled: form.sms_enabled,
+      telegram_enabled: form.telegram_enabled,
     })
-  }
 
   const save = async () => {
     setBusy('save')
@@ -77,8 +81,29 @@ export default function SettingsModal({ status, onClose, onSaved, flash }) {
     }
   }
 
+  const findTelegramChat = async () => {
+    setBusy('tg-find')
+    setTgHint('')
+    setError('')
+    try {
+      const { chats } = await api.telegramChats()
+      if (!chats.length) {
+        setTgHint('No messages yet — open your bot in Telegram, send it "hi", then try again.')
+        return
+      }
+      const ids = chats.map((c) => c.chat_id)
+      setForm((f) => ({ ...f, notify_telegram: ids.join(', '), telegram_enabled: true }))
+      setTgHint(`Found: ${chats.map((c) => `${c.name} (${c.chat_id})`).join(', ')}`)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
   const email = status?.email
   const sms = status?.sms
+  const telegram = status?.telegram
 
   return (
     <div className="overlay" onMouseDown={onClose}>
@@ -123,13 +148,56 @@ export default function SettingsModal({ status, onClose, onSaved, flash }) {
                 <ProviderHint
                   ok={email?.provider_configured}
                   okText="SMTP is connected — real emails will be sent."
-                  offText="Not connected — emails only print to the backend console. Add SMTP_* to .env (Gmail app password) and restart the backend."
+                  offText="Not connected — emails only print to the backend console. Add SMTP_* to .env (Gmail app password) and reload the backend."
                 />
                 <TestRow
                   label="Send test email"
                   busy={busy === 'email'}
                   result={testResult.email}
                   onClick={() => test('email')}
+                />
+              </div>
+
+              {/* -------- Telegram -------- */}
+              <div className="channel">
+                <label className="checkbox">
+                  <input
+                    type="checkbox"
+                    checked={form.telegram_enabled}
+                    onChange={set('telegram_enabled')}
+                  />
+                  <span>Telegram reminders</span>
+                </label>
+                <label className="field">
+                  <span>Chat id(s)</span>
+                  <input
+                    type="text"
+                    value={form.notify_telegram}
+                    onChange={set('notify_telegram')}
+                    placeholder="123456789"
+                  />
+                </label>
+                <div className="test-row">
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--sm"
+                    onClick={findTelegramChat}
+                    disabled={busy === 'tg-find' || !telegram?.provider_configured}
+                  >
+                    {busy === 'tg-find' ? 'Checking…' : 'Find my chat'}
+                  </button>
+                  {tgHint && <span className="hint">{tgHint}</span>}
+                </div>
+                <ProviderHint
+                  ok={telegram?.provider_configured}
+                  okText="Bot connected — send it a message, then click “Find my chat”."
+                  offText="Not connected — add TELEGRAM_BOT_TOKEN to .env (from @BotFather) and reload the backend."
+                />
+                <TestRow
+                  label="Send test Telegram"
+                  busy={busy === 'telegram'}
+                  result={testResult.telegram}
+                  onClick={() => test('telegram')}
                 />
               </div>
 
@@ -155,7 +223,7 @@ export default function SettingsModal({ status, onClose, onSaved, flash }) {
                 <ProviderHint
                   ok={sms?.provider_configured}
                   okText={`SMS gateway connected (${sms?.provider}) — real texts will be sent.`}
-                  offText="Not connected — texts only print to the backend console. Add a Nepal SMS gateway token (AakashSMS or Sparrow) to .env and restart the backend."
+                  offText="Not connected — texts only print to the backend console. Needs a paid Nepal SMS gateway (AakashSMS / Sparrow) token in .env."
                 />
                 <TestRow
                   label="Send test text"
@@ -169,7 +237,7 @@ export default function SettingsModal({ status, onClose, onSaved, flash }) {
                 The daily digest runs at{' '}
                 <strong>{String(status?.notify_hour ?? 7).padStart(2, '0')}:00</strong>{' '}
                 Nepal time. How far ahead each reminder fires is set per event
-                ("days before").
+                ("days before"), plus any specific times you add to an event.
               </p>
 
               {error && <div className="modal__error">{error}</div>}

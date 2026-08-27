@@ -11,7 +11,7 @@ Category = Literal[
     "personal", "holiday", "festival", "birthday", "anniversary", "meeting", "other"
 ]
 Recurrence = Literal["none", "yearly_ad", "yearly_bs"]
-ReminderChannel = Literal["all", "email", "sms"]
+ReminderChannel = Literal["all", "email", "sms", "telegram"]
 
 
 class ReminderIn(BaseModel):
@@ -116,16 +116,20 @@ class NotificationSettingsOut(BaseModel):
 
     notify_emails: str
     notify_phones: str
+    notify_telegram: str
     email_enabled: bool
     sms_enabled: bool
+    telegram_enabled: bool
 
 
 class NotificationSettingsUpdate(BaseModel):
     notify_emails: Optional[str] = None
     notify_phones: Optional[str] = None
+    notify_telegram: Optional[str] = None
     email_enabled: Optional[bool] = None
     sms_enabled: Optional[bool] = None
+    telegram_enabled: Optional[bool] = None
 
 
 class TestNotificationRequest(BaseModel):
-    channels: Optional[list[Literal["email", "sms"]]] = None
+    channels: Optional[list[Literal["email", "sms", "telegram"]]] = None

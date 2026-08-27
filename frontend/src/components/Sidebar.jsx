@@ -24,6 +24,7 @@ function adShort(iso) {
 function previewTargetLine(preview, notif) {
   const targets = [
     ...(preview.email_targets || []),
+    ...(preview.telegram_targets || []),
     ...(preview.sms_targets || []),
   ]
   if (targets.length) return `Would notify ${targets.join(', ')}:`
