@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nepcal
+      POSTGRES_PASSWORD: nepcal
+      POSTGRES_DB: nepcal
+    ports:
+      # Host port is configurable so it won't clash with another local Postgres.
+      - "${DB_PORT:-5532}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nepcal"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: ./backend
+    # Values below come from ./.env when present (Compose loads it automatically),
+    # otherwise the defaults after ":-" are used. No .env file is required.
+    environment:
+      DATABASE_URL: postgresql+psycopg2://nepcal:nepcal@db:5432/nepcal
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      SMTP_FROM: ${SMTP_FROM:-Nepali Calendar <no-reply@example.com>}
+      NOTIFY_TO: ${NOTIFY_TO:-}
+      NOTIFY_HOUR: ${NOTIFY_HOUR:-7}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5273}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8200}:8000"
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    environment:
+      # Vite listens on this port inside the container AND it is the host port,
+      # so they always match (keeps HMR working through the port mapping).
+      PORT: ${FRONTEND_PORT:-5273}
+      VITE_API_PROXY: http://backend:8000
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-5273}:${FRONTEND_PORT:-5273}"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  pgdata:
