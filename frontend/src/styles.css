@@ -1,14 +1,26 @@
 :root {
-  --crimson: #dc143c;
-  --crimson-dark: #b01030;
-  --blue: #003893;
-  --ink: #1b1b2b;
-  --muted: #6b7280;
-  --bg: #f5f6f8;
-  --card: #ffffff;
-  --border: #e4e4ec;
-  --border-strong: #d3d3dd;
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.06);
+  color-scheme: dark;
+
+  /* crimson: accent for text/borders on dark; -solid for filled buttons */
+  --crimson: #ff5c78;
+  --crimson-solid: #e11d48;
+  --crimson-solid-hover: #c81a40;
+  --crimson-soft: rgba(255, 92, 120, 0.12);
+  --red-text: #ff8ea0;
+  --blue: #6ea8ff;
+  --green: #4ade80;
+  --amber: #fbbf24;
+
+  --ink: #e9e9f1;
+  --muted: #9a9aab;
+  --bg: #101119;
+  --card: #1b1c25;
+  --raise: #24252f;
+  --field-bg: #14151d;
+  --border: #2c2d38;
+  --border-strong: #3b3c49;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.38);
   --radius: 12px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial, "Noto Sans", "Noto Sans Devanagari", sans-serif;
@@ -30,7 +42,8 @@ button {
 }
 
 code {
-  background: #ececf2;
+  background: var(--raise);
+  color: var(--ink);
   padding: 1px 5px;
   border-radius: 5px;
   font-size: 0.9em;
@@ -55,18 +68,19 @@ code {
   transition: background 0.12s, border-color 0.12s, transform 0.05s;
 }
 .btn:hover {
-  background: #f3f3f7;
+  background: var(--raise);
 }
 .btn:active {
   transform: translateY(1px);
 }
 .btn--primary {
-  background: var(--crimson);
-  border-color: var(--crimson);
+  background: var(--crimson-solid);
+  border-color: var(--crimson-solid);
   color: #fff;
 }
 .btn--primary:hover {
-  background: var(--crimson-dark);
+  background: var(--crimson-solid-hover);
+  border-color: var(--crimson-solid-hover);
 }
 .btn--primary:disabled {
   opacity: 0.6;
@@ -76,12 +90,12 @@ code {
   background: transparent;
 }
 .btn--danger {
-  border-color: #f1c4cd;
+  border-color: color-mix(in srgb, var(--crimson) 45%, var(--border));
   color: var(--crimson);
-  background: #fff;
+  background: transparent;
 }
 .btn--danger:hover {
-  background: #fdecef;
+  background: var(--crimson-soft);
 }
 .btn--icon {
   padding: 6px 12px;
@@ -120,7 +134,7 @@ code {
   height: 12px;
   border-radius: 50%;
   background: var(--crimson);
-  box-shadow: 0 0 0 3px rgba(220, 20, 60, 0.18);
+  box-shadow: 0 0 0 3px rgba(255, 92, 120, 0.25);
 }
 .header__today {
   color: var(--muted);
@@ -187,7 +201,7 @@ code {
   letter-spacing: 0.03em;
   color: var(--muted);
   text-align: left;
-  background: #fafafc;
+  background: #16171f;
   border-bottom: 1px solid var(--border);
 }
 .grid__weekday--sat {
@@ -208,20 +222,20 @@ code {
   transition: background 0.1s;
 }
 .cell:hover {
-  background: #f6f8ff;
+  background: var(--raise);
 }
 .cell--empty {
-  background: #fafafb;
+  background: #16171f;
   cursor: default;
 }
 .cell--saturday {
-  background: #fbf7f8;
+  background: rgba(255, 92, 120, 0.06);
 }
 .cell--holiday {
-  background: #fdeef1;
+  background: rgba(255, 92, 120, 0.12);
 }
 .cell--today {
-  background: #eef3ff;
+  background: rgba(110, 168, 255, 0.13);
   box-shadow: inset 0 0 0 2px var(--blue);
 }
 .cell__head {
@@ -233,9 +247,7 @@ code {
   font-size: 16px;
   font-weight: 700;
 }
-.cell--holiday .cell__bs {
-  color: var(--crimson);
-}
+.cell--holiday .cell__bs,
 .cell--saturday .cell__bs {
   color: var(--crimson);
 }
@@ -257,8 +269,8 @@ code {
   line-height: 1.3;
   padding: 2px 6px;
   border-radius: 5px;
-  color: #29303d;
-  background: color-mix(in srgb, var(--chip) 16%, white);
+  color: var(--ink);
+  background: color-mix(in srgb, var(--chip) 24%, var(--card));
   border-left: 3px solid var(--chip);
   cursor: pointer;
   white-space: nowrap;
@@ -266,7 +278,7 @@ code {
   text-overflow: ellipsis;
 }
 .chip:hover {
-  background: color-mix(in srgb, var(--chip) 26%, white);
+  background: color-mix(in srgb, var(--chip) 38%, var(--card));
 }
 .chip--more {
   background: transparent;
@@ -289,8 +301,8 @@ code {
   padding: 14px 16px;
 }
 .panel--preview {
-  border-color: #f1c4cd;
-  background: #fef7f8;
+  border-color: color-mix(in srgb, var(--crimson) 40%, var(--border));
+  background: rgba(255, 92, 120, 0.06);
 }
 .panel__title {
   margin: 0 0 10px;
@@ -338,7 +350,7 @@ code {
   cursor: pointer;
 }
 .event-row:hover {
-  background: #f5f6fa;
+  background: var(--raise);
 }
 .event-row + .event-row {
   border-top: 1px solid var(--border);
@@ -378,7 +390,7 @@ code {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--crimson);
-  background: #fce7eb;
+  background: var(--crimson-soft);
   padding: 1px 5px;
   border-radius: 4px;
 }
@@ -387,7 +399,7 @@ code {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(20, 22, 34, 0.45);
+  background: rgba(0, 0, 0, 0.62);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -396,10 +408,11 @@ code {
 }
 .modal {
   background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 14px;
   width: 100%;
   max-width: 460px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
   overflow: hidden;
 }
 .modal__head {
@@ -431,19 +444,24 @@ code {
 }
 .field input,
 .field textarea,
-.field select {
+.field select,
+.reminder-row input[type='datetime-local'],
+.reminder-row select,
+.send-now select {
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 14px;
   font-family: inherit;
   color: var(--ink);
-  background: #fff;
+  background: var(--field-bg);
 }
 .field input:focus,
 .field textarea:focus,
-.field select:focus {
-  outline: 2px solid rgba(0, 56, 147, 0.35);
+.field select:focus,
+.reminder-row input:focus,
+.reminder-row select:focus {
+  outline: 2px solid rgba(110, 168, 255, 0.4);
   border-color: var(--blue);
 }
 .field-row {
@@ -464,8 +482,12 @@ code {
   font-size: 13.5px;
   padding-bottom: 8px;
 }
+.checkbox input,
+.field-row--notify input[type='checkbox'] {
+  accent-color: var(--crimson-solid);
+}
 .bs-preview {
-  background: #eef3ff;
+  background: rgba(110, 168, 255, 0.1);
   color: var(--blue);
   border-radius: 8px;
   padding: 8px 10px;
@@ -473,8 +495,8 @@ code {
   font-weight: 550;
 }
 .modal__error {
-  background: #fdecef;
-  color: var(--crimson-dark);
+  background: var(--crimson-soft);
+  color: var(--red-text);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 13px;
@@ -497,10 +519,10 @@ code {
   line-height: 1.4;
 }
 .hint--ok {
-  color: #15803d;
+  color: var(--green);
 }
 .hint--warn {
-  color: #b45309;
+  color: var(--amber);
 }
 .test-row {
   display: flex;
@@ -512,7 +534,7 @@ code {
   font-size: 12px;
 }
 .test-result--sent {
-  color: #15803d;
+  color: var(--green);
 }
 .test-result--logged,
 .test-result--skipped {
@@ -557,23 +579,16 @@ code {
 .reminder-row input[type='datetime-local'] {
   flex: 1;
   min-width: 0;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
   padding: 6px 8px;
   font-size: 13px;
-  font-family: inherit;
 }
 .reminder-row select {
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
   padding: 6px 8px;
   font-size: 13px;
-  font-family: inherit;
-  background: #fff;
 }
 .reminder-row--sent {
   font-size: 12.5px;
-  color: #15803d;
+  color: var(--green);
   padding: 2px 0;
 }
 .send-now {
@@ -585,12 +600,8 @@ code {
   padding-top: 10px;
 }
 .send-now select {
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
   padding: 5px 8px;
   font-size: 12.5px;
-  font-family: inherit;
-  background: #fff;
 }
 
 .modal__foot {
@@ -610,8 +621,9 @@ code {
   bottom: 22px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--ink);
-  color: #fff;
+  background: #2b2c38;
+  color: var(--ink);
+  border: 1px solid var(--border);
   padding: 10px 18px;
   border-radius: 10px;
   font-size: 13.5px;
